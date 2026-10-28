@@ -72,6 +72,8 @@ namespace lfg
     */
     class LFGQueue
     {
+        friend class LfgQueueCancellationTest;
+
     public:
         // Add/Remove from queue
         void AddToQueue(ObjectGuid guid, bool failedProposal = false);

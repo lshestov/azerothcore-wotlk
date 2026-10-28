@@ -84,7 +84,7 @@ protected:
             roles[guid] = PLAYER_ROLE_DAMAGE;
         }
         _manager->GetQueue(_group).AddQueueData(_group, 123, LfgDungeonSet{ 12 }, roles);
-        EXPECT_EQ(_manager->GetQueue(_group).GetJoinTime(_group), 123);
+        EXPECT_EQ(_manager->GetQueue(_group).QueueDataStore.count(_group), 1u);
     }
 
     void CancelGroupQueue()
@@ -92,7 +92,7 @@ protected:
         // The client opcode handler invokes both methods in this order.
         _manager->LeaveLfg(_group);
         _manager->LeaveAllLfgQueues(_players.front(), true, _group);
-        EXPECT_EQ(_manager->GetQueue(_group).GetJoinTime(_group), 0);
+        EXPECT_EQ(_manager->GetQueue(_group).QueueDataStore.count(_group), 0u);
     }
 
     void PrepareAndCancelSoloQueue()
