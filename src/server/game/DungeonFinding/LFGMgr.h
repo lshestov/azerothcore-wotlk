@@ -419,6 +419,8 @@ namespace lfg
 
     class LFGMgr
     {
+        friend class LfgQueueCancellationTest;
+
     private:
         LFGMgr();
         ~LFGMgr();

@@ -921,13 +921,23 @@ namespace lfg
                     LFGQueue& queue = GetQueue(gguid);
                     queue.RemoveFromQueue(gguid);
                     uint32 dungeonId = GetDungeon(gguid);
-                    SetState(gguid, LFG_STATE_NONE);
+                    // Cancelling a replacement search must preserve the active run and random reward selection.
+                    bool const isContinue = GetOldState(gguid) == LFG_STATE_DUNGEON;
+                    if (isContinue)
+                        RestoreState(gguid, "Replacement queue cancelled");
+                    else
+                        SetState(gguid, LFG_STATE_NONE);
                     LfgGuidSet const& players = GetPlayers(gguid);
                     for (LfgGuidSet::const_iterator it = players.begin(); it != players.end(); ++it)
                     {
-                        SetState(*it, LFG_STATE_NONE);
+                        if (isContinue)
+                            RestoreState(*it, "Replacement queue cancelled");
+                        else
+                            SetState(*it, LFG_STATE_NONE);
                         SendLfgUpdateParty(*it, LfgUpdateData(LFG_UPDATETYPE_REMOVED_FROM_QUEUE));
                     }
+                    if (isContinue && guid != gguid)
+                        SetState(guid, LFG_STATE_NONE);
                     if (Group* group = sGroupMgr->GetGroupByGUID(gguid.GetCounter()))
                     {
                         if (group->isLFGGroup())
