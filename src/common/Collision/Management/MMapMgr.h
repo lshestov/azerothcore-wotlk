@@ -68,7 +68,7 @@ namespace MMAP
 
         static std::shared_ptr<dtNavMesh> LoadNavMesh(uint32 mapId);
         static bool LoadTile(dtNavMesh* navMesh, uint32 mapId, int32 x, int32 y);
-        static ManagedNavMeshQuery CreateNavMeshQuery(dtNavMesh* navMesh);
+        static ManagedNavMeshQuery CreateNavMeshQuery(dtNavMesh const* navMesh, uint32 maxNodes = 1024);
 
     private:
         static uint32 packTileID(int32 x, int32 y);

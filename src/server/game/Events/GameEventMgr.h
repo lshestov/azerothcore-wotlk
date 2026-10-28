@@ -196,6 +196,9 @@ private:
     GameEventSeasonalQuestsMap _gameEventSeasonalQuestsMap;
     HolidayMainStageMap _holidayMainStages;
 public:
+    [[nodiscard]] GameEventQuestMap const& GetEventCreatureQuestMap() const { return _gameEventCreatureQuests; }
+    [[nodiscard]] GameEventQuestMap const& GetEventGameObjectQuestMap() const { return _gameEventGameObjectQuests; }
+    [[nodiscard]] GameEventIdMap const& GetEventPoolIds() const { return _gameEventPoolIds; }
     GameEventGuidMap  GameEventCreatureGuids;
     GameEventGuidMap  GameEventGameobjectGuids;
     std::vector<uint32> ModifiedHolidays;

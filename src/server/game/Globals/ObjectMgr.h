@@ -865,6 +865,7 @@ public:
 
     [[nodiscard]] GossipText const* GetGossipText(uint32 Text_ID) const;
 
+    [[nodiscard]] AreaTriggerContainer const& GetAllAreaTriggers() const { return _areaTriggerStore; }
     [[nodiscard]] AreaTrigger const* GetAreaTrigger(uint32 trigger) const
     {
         AreaTriggerContainer::const_iterator itr = _areaTriggerStore.find(trigger);

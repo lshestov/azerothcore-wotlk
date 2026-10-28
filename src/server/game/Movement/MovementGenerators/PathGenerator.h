@@ -25,6 +25,7 @@
 #include "MoveSplineInitArgs.h"
 #include "SharedDefines.h"
 #include <G3D/Vector3.h>
+#include <vector>
 
 class Unit;
 class WorldObject;
@@ -66,7 +67,13 @@ enum PathType
 class PathGenerator
 {
     public:
-        explicit PathGenerator(WorldObject const* owner);
+        enum class SearchMode
+        {
+            Normal,
+            LongDistance
+        };
+
+        explicit PathGenerator(WorldObject const* owner, SearchMode searchMode = SearchMode::Normal);
         ~PathGenerator();
 
         // Calculate the path from owner to given destination
@@ -146,7 +153,10 @@ class PathGenerator
         }
 
     private:
-        dtPolyRef _pathPolyRefs[MAX_PATH_LENGTH];   // array of detour polygon references
+        dtPolyRef _normalPathPolyRefs[MAX_PATH_LENGTH]{};
+        std::vector<dtPolyRef> _longPathPolyRefs;
+        dtPolyRef* _pathPolyRefs;                   // normal storage or the opt-in long-distance buffer
+        uint32 _pathPolyLimit;
         uint32 _polyLength;                         // number of polygons in the path
 
         Movement::PointsArray _pathPoints;  // our actual (x,y,z) path to the target
@@ -165,6 +175,7 @@ class PathGenerator
         WorldObject const* const _source;       // the object that is moving
         dtNavMesh const* _navMesh;              // the nav mesh
         dtNavMeshQuery const* _navMeshQuery;    // the nav mesh query used to find the path
+        MMAP::ManagedNavMeshQuery _longNavMeshQuery; // private query; never resize the shared map query
 
         dtQueryFilterExt _filter;  // use single filter for all movements, update it when needed
 

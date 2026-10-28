@@ -23,6 +23,7 @@
 #include "MMapMgr.h"
 #include "Map.h"
 #include "Metric.h"
+#include "PathSearchLimits.h"
 #include "Player.h"
 #include "WorldSession.h"
 
@@ -125,18 +126,29 @@ namespace
 }
 
  ////////////////// PathGenerator //////////////////
-PathGenerator::PathGenerator(WorldObject const* owner) :
+PathGenerator::PathGenerator(WorldObject const* owner, SearchMode searchMode) :
+    _pathPolyRefs(_normalPathPolyRefs), _pathPolyLimit(MAX_PATH_LENGTH),
     _polyLength(0), _type(PATHFIND_BLANK), _useStraightPath(false), _forceDestination(false),
     _slopeCheck(false), _pointPathLimit(MAX_POINT_PATH_LENGTH), _useRaycast(false),
     _endPosition(G3D::Vector3::zero()), _source(owner), _navMesh(nullptr),
     _navMeshQuery(nullptr)
 {
-    memset(_pathPolyRefs, 0, sizeof(_pathPolyRefs));
-
     //if (sDisableMgr->IsPathfindingEnabled(_sourceUnit->FindMap()))
     {
         _navMesh = _source->GetMap()->GetMapCollisionData().GetMMapData().GetNavMesh();
         _navMeshQuery = _source->GetMap()->GetMapCollisionData().GetMMapData().GetNavMeshQuery();
+    }
+
+    if (searchMode == SearchMode::LongDistance)
+    {
+        _longPathPolyRefs.resize(Movement::LongPathSearchPolygons);
+        _pathPolyRefs = _longPathPolyRefs.data();
+        _pathPolyLimit = Movement::LongPathSearchPolygons;
+        if (_navMesh)
+        {
+            _longNavMeshQuery = MMAP::MMapMgr::CreateNavMeshQuery(_navMesh, Movement::LongPathSearchNodes);
+            _navMeshQuery = _longNavMeshQuery.get();
+        }
     }
 
     CreateFilter();
@@ -474,7 +486,7 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
                 &_filter,            // polygon search filter
                 _pathPolyRefs + prefixPolyLength - 1,    // [out] path
                 (int*)&suffixPolyLength,
-                MAX_PATH_LENGTH - prefixPolyLength); // max number of polygons in output path
+                _pathPolyLimit - prefixPolyLength); // max number of polygons in output path
         }
 
         if (!suffixPolyLength || dtStatusFailed(dtResult))
@@ -513,7 +525,7 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
                 hitNormal,
                 _pathPolyRefs,
                 (int*)&_polyLength,
-                MAX_PATH_LENGTH);
+                _pathPolyLimit);
 
             if (!_polyLength || dtStatusFailed(dtResult))
             {
@@ -577,7 +589,7 @@ void PathGenerator::BuildPolyPath(G3D::Vector3 const& startPos, G3D::Vector3 con
                 &_filter,           // polygon search filter
                 _pathPolyRefs,     // [out] path
                 (int*)&_polyLength,
-                MAX_PATH_LENGTH);   // max number of polygons in output path
+                _pathPolyLimit);   // max number of polygons in output path
         }
 
         if (!_polyLength || dtStatusFailed(dtResult))
@@ -942,7 +954,16 @@ dtStatus PathGenerator::FindSmoothPath(float const* startPos, float const* endPo
     *smoothPathSize = 0;
     uint32 nsmoothPath = 0;
 
-    dtPolyRef polys[MAX_PATH_LENGTH];
+    dtPolyRef normalPolys[MAX_PATH_LENGTH];
+    std::vector<dtPolyRef> longPolys;
+    dtPolyRef* polys = normalPolys;
+    if (_pathPolyLimit > MAX_PATH_LENGTH)
+    {
+        longPolys.resize(_pathPolyLimit);
+        polys = longPolys.data();
+    }
+    if (polyPathSize > _pathPolyLimit)
+        return DT_FAILURE;
     memcpy(polys, polyPath, sizeof(dtPolyRef) * polyPathSize);
     uint32 npolys = polyPathSize;
 
@@ -1009,7 +1030,7 @@ dtStatus PathGenerator::FindSmoothPath(float const* startPos, float const* endPo
         {
             return DT_FAILURE;
         }
-        npolys = FixupCorridor(polys, npolys, MAX_PATH_LENGTH, visited, nvisited);
+        npolys = FixupCorridor(polys, npolys, _pathPolyLimit, visited, nvisited);
 
         if (dtStatusFailed(_navMeshQuery->getPolyHeight(polys[0], result, &result[1])))
             LOG_DEBUG("maps", "PathGenerator::FindSmoothPath: Cannot find height at position X: {} Y: {} Z: {} for {}",
